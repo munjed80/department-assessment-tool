@@ -143,13 +143,17 @@ function App() {
   }
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadAllData()
+    const run = async () => {
+      await loadAllData()
+    }
+    void run()
   }, [])
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadReport()
+    const run = async () => {
+      await loadReport()
+    }
+    void run()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [departments.length])
 
