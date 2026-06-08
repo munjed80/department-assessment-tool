@@ -9,3 +9,22 @@ body {
   background: #f8fafc;
   color: #0f172a;
 }
+
+textarea {
+  min-height: 90px;
+}
+
+@media print {
+  body {
+    background: white;
+  }
+
+  main {
+    padding: 0 !important;
+  }
+
+  .print-report {
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+}
