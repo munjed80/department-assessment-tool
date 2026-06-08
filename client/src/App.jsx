@@ -58,7 +58,7 @@ const api = async (path, options) => {
 
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}))
-    throw new Error(payload.error || 'حدث خطأ أثناء تنفيذ الطلب')
+    throw new Error(payload.error || `حدث خطأ أثناء تنفيذ الطلب (${response.status})`)
   }
 
   if (response.status === 204) {
@@ -146,14 +146,14 @@ function App() {
     const run = async () => {
       await loadAllData()
     }
-    void run()
+    run().catch((err) => setError(err.message))
   }, [])
 
   useEffect(() => {
     const run = async () => {
       await loadReport()
     }
-    void run()
+    run().catch((err) => setError(err.message))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [departments.length])
 

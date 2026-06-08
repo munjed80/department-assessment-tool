@@ -5,6 +5,7 @@ const path = require('path')
 
 const app = express()
 const PORT = process.env.PORT || 4000
+const HIGH_PRIORITY_THRESHOLD = 60
 const db = new sqlite3.Database(path.join(__dirname, 'database.sqlite'))
 
 app.use(cors())
@@ -71,6 +72,11 @@ const parseNumber = (value, fallback = 0) => {
   return Number.isFinite(parsed) ? parsed : fallback
 }
 
+const parseInteger = (value, fallback = 0) => {
+  const parsed = Number.parseInt(value, 10)
+  return Number.isInteger(parsed) ? parsed : fallback
+}
+
 const initDb = async () => {
   await run('PRAGMA foreign_keys = ON')
 
@@ -134,7 +140,7 @@ const normalizeDepartment = (body) => ({
   name: body.name?.trim(),
   head_name: body.head_name || '',
   phone: body.phone || '',
-  employees_count: parseInt(body.employees_count, 10) || 0,
+  employees_count: parseInteger(body.employees_count, 0),
   official_responsibilities: body.official_responsibilities || '',
   current_tools: body.current_tools || '',
   digital_readiness_score: parseNumber(body.digital_readiness_score),
@@ -142,7 +148,7 @@ const normalizeDepartment = (body) => ({
 })
 
 const normalizeInterview = (body) => ({
-  department_id: parseInt(body.department_id, 10),
+  department_id: parseInteger(body.department_id, 0),
   interview_date: body.interview_date || '',
   interviewed_person: body.interviewed_person || '',
   position: body.position || '',
@@ -156,7 +162,7 @@ const normalizeInterview = (body) => ({
 })
 
 const normalizeProblem = (body) => ({
-  department_id: parseInt(body.department_id, 10),
+  department_id: parseInteger(body.department_id, 0),
   title: body.title?.trim(),
   description: body.description || '',
   root_cause: body.root_cause || '',
@@ -430,7 +436,7 @@ app.get('/api/dashboard', async (_req, res) => {
       get('SELECT COUNT(*) AS count FROM departments'),
       get('SELECT COUNT(*) AS count FROM interviews'),
       get('SELECT COUNT(*) AS count FROM problems'),
-      get('SELECT COUNT(*) AS count FROM problems WHERE priority_score >= 60'),
+      get('SELECT COUNT(*) AS count FROM problems WHERE priority_score >= ?', [HIGH_PRIORITY_THRESHOLD]),
       all(
         `SELECT problems.id, problems.title, problems.priority_score, departments.name AS department_name
          FROM problems
@@ -450,7 +456,7 @@ app.get('/api/dashboard', async (_req, res) => {
 })
 
 app.get('/api/reports', async (req, res) => {
-  const departmentId = req.query.department_id ? parseInt(req.query.department_id, 10) : null
+  const departmentId = req.query.department_id ? parseInteger(req.query.department_id, 0) : null
   const minPriority = parseNumber(req.query.min_priority, 0)
 
   const problemFilters = ['problems.priority_score >= ?']
@@ -501,7 +507,7 @@ app.get('/api/reports', async (req, res) => {
 })
 
 app.get('/api/export/problems', async (req, res) => {
-  const departmentId = req.query.department_id ? parseInt(req.query.department_id, 10) : null
+  const departmentId = req.query.department_id ? parseInteger(req.query.department_id, 0) : null
   const minPriority = parseNumber(req.query.min_priority, 0)
 
   const filters = ['priority_score >= ?']
@@ -519,7 +525,7 @@ app.get('/api/export/problems', async (req, res) => {
 })
 
 app.get('/api/export/interviews', async (req, res) => {
-  const departmentId = req.query.department_id ? parseInt(req.query.department_id, 10) : null
+  const departmentId = req.query.department_id ? parseInteger(req.query.department_id, 0) : null
 
   const rows = await all(
     `SELECT * FROM interviews ${departmentId ? 'WHERE department_id = ?' : ''} ORDER BY interview_date DESC`,
@@ -531,10 +537,10 @@ app.get('/api/export/interviews', async (req, res) => {
   res.send(toCsv(rows))
 })
 
-app.use((err, _req, res, _next) => {
+app.use((err, req, res, _next) => {
   // eslint-disable-next-line no-console
-  console.error(err)
-  res.status(500).json({ error: 'Internal server error' })
+  console.error('Unhandled error at request', { method: req.method, path: req.path }, err)
+  res.status(500).json({ error: 'حدث خطأ في الخادم' })
 })
 
 initDb()
